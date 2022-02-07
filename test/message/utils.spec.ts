@@ -57,8 +57,11 @@ describe('message utils', () => {
         expect(verified).to.equal(VERIFICATION_STATUS.SIGNED_AND_VALID);
         expect(signatures.length).to.equal(2);
         expect(errors).to.be.undefined;
-        const signaturePackets = signatures.map(({ packets: [sigPacket] }) => sigPacket);
-        expect(signatureTimestamp).to.equal(signaturePackets[0].created);
+        const parsedVerifiedSignature = await Promise.all(
+            signatures.map((binarySignature) => readSignature({ binarySignature }))
+        );
+        const signaturePackets = parsedVerifiedSignature.map(({ packets: [sigPacket] }) => sigPacket);
+        expect(signatureTimestamp).to.deep.equal(signaturePackets[0].created);
     });
 
     it('verifyMessage - it verifies a message with multiple signatures and returns the timestamp of the valid signature', async () => {
@@ -73,15 +76,18 @@ describe('message utils', () => {
         expect(verified).to.equal(VERIFICATION_STATUS.SIGNED_AND_VALID);
         expect(signatures.length).to.equal(2);
         expect(errors).to.be.undefined;
-        const signaturePackets = signatures.map(({ packets: [sigPacket] }) => sigPacket);
+        const parsedVerifiedSignature = await Promise.all(
+            signatures.map((binarySignature) => readSignature({ binarySignature }))
+        );
+        const signaturePackets = parsedVerifiedSignature.map(({ packets: [sigPacket] }) => sigPacket);
         const validSignature = signaturePackets.find(
             (sigPacket) => sigPacket.issuerKeyID.equals(publicKey1.getKeyID())
         );
         const invalidSignature = signaturePackets.find(
             (sigPacket) => sigPacket.issuerKeyID.equals(publicKey2.getKeyID())
         );
-        expect(signatureTimestamp).to.equal(validSignature?.created);
-        expect(signatureTimestamp).to.not.equal(invalidSignature?.created);
+        expect(signatureTimestamp).to.deep.equal(validSignature?.created);
+        expect(signatureTimestamp).to.not.deep.equal(invalidSignature?.created);
     });
 
     it('verifyMessage - it does not verify a message given wrong public key', async () => {

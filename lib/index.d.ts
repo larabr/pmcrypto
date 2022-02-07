@@ -247,7 +247,7 @@ type VerifyOptionsPmcrypto = VerifyOptionsPmcryptoWithTextData | VerifyOptionsPm
 export interface VerifyMessageResult {
     data: openpgp_VerifyMessageResult['data'];
     verified: VERIFICATION_STATUS;
-    signatures: OpenPGPSignature[];
+    signatures: Uint8Array[];
     signatureTimestamp: Date|null,
     errors?: Error[];
 }
