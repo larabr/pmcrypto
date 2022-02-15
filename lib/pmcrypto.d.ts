@@ -299,6 +299,7 @@ export interface ProcessMIMEResult {
 export function processMIME(options: ProcessMIMEOptions): Promise<ProcessMIMEResult>;
 
 export function serverTime(): Date;
+export function updateServerTime(serverDate: Date): Date;
 
 export function getSHA256Fingerprints(key: OpenPGPKey): Promise<string[]>;
 
