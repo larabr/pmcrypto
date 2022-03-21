@@ -16,8 +16,12 @@ import {
     EncryptSessionKeyOptions,
     decryptSessionKeys as openpgp_decryptSessionKeys,
     WebStream,
-    KeyOptions
+    KeyOptions as GenerateKeyOptions,
+    UserID,
+    PartialConfig
 } from 'openpgp/lightweight';
+
+type MaybeArray<T> = T | T[];
 
 export function init(): void;
 
@@ -37,7 +41,17 @@ export type OpenPGPMessage = Message<Uint8Array | string>; // TODO missing strea
 export type OpenPGPSignature = Signature;
 
 export { generateKey, reformatKey };
-export type { PrivateKey, PublicKey, KeyOptions, Key, SessionKey };
+export type { PrivateKey, PublicKey, GenerateKeyOptions, Key, SessionKey };
+
+export interface ReformatKeyOptions {
+    privateKey: PrivateKey;
+    userIDs?: MaybeArray<UserID>;
+    passphrase?: string;
+    keyExpirationTime?: number;
+    date?: Date,
+    format?: GenerateKeyOptions['format'],
+    config?: PartialConfig
+}
 
 export interface DecryptLegacyOptions extends Omit<DecryptOptions, 'message'> {
     message: string;
