@@ -18,7 +18,8 @@ import {
     WebStream,
     KeyOptions as GenerateKeyOptions,
     UserID,
-    PartialConfig
+    PartialConfig,
+    CleartextMessage
 } from 'openpgp/lightweight';
 
 type MaybeArray<T> = T | T[];
@@ -251,6 +252,7 @@ export function signMessage<
 export function getSignature(option: string | Uint8Array | OpenPGPSignature): Promise<OpenPGPSignature>;
 
 export function getMessage(message: OpenPGPMessage | Uint8Array | string): Promise<OpenPGPMessage>;
+export function getCleartextMessage(message: CleartextMessage | string): Promise<CleartextMessage>;
 
 export function splitMessage(message: OpenPGPMessage | Uint8Array | string): Promise<{
     asymmetric: Uint8Array[];
@@ -298,6 +300,14 @@ export function verifyMessage<T extends Data, F extends VerifyOptions['format'] 
         VerifyMessageResult<Uint8Array> :
     never
 >;
+
+export interface VerifyCleartextOptionsPmcrypto extends Omit<VerifyOptions, 'message' | 'signature' | 'format'> {
+    cleartextMessage: CleartextMessage
+}
+// Cleartext message data is always of utf8 format
+export function verifyCleartextMessage(
+    options: VerifyCleartextOptionsPmcrypto
+): Promise<VerifyMessageResult<string>>;
 
 export interface ProcessMIMEOptions {
     data: string,
