@@ -56,6 +56,7 @@ export const WorkerPool: WorkerPoolInterface = (() => {
         encryptMessage: (opts) => getWorker().encryptMessage(opts),
         decryptMessage: (opts) => getWorker().decryptMessage(opts),
         decryptMessageLegacy: (opts) => getWorker().decryptMessageLegacy(opts),
+        decryptMessageStream: (opts) => getWorker().decryptMessageStream(opts),
         // @ts-ignore marked as non-callable, unclear why, might be due to a limitation of type Remote
         signMessage: (opts) => getWorker().signMessage(opts),
         // @ts-ignore marked as non-callable, unclear why, might be due to a limitation of type Remote

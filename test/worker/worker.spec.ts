@@ -1,5 +1,8 @@
 import { expect, use as chaiUse } from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
+// @ts-ignore missing TS definitions
+import { toStream, readToEnd } from '@openpgp/web-stream-tools/lib/streams';
+
 import {
     readPrivateKey as openpgp_readPrivateKey,
     decryptKey as openpgp_decryptKey,
@@ -152,6 +155,71 @@ tBiO7HKQxoGj3FnUTJnI52Y0pIg=
         expect(decryptionResult.signatures).to.have.length(1);
         expect(decryptionResult.errors).to.not.exist;
         expect(decryptionResult.verified).to.equal(VERIFICATION_STATUS.SIGNED_AND_VALID);
+    });
+
+    it('decryptMessageStream - should decrypt message with correct password', async () => {
+        const armoredMessage = `-----BEGIN PGP MESSAGE-----
+
+wy4ECQMIxybp91nMWQIAa8pGeuXzR6zIs+uE6bUywPM4GKG8sve4lJoxGbVS
+/xN10jwBEsZQGe7OTWqxJ9NNtv6X6qFEkvABp4PD3xvi34lo2WUAaUN2wb0g
+tBiO7HKQxoGj3FnUTJnI52Y0pIg=
+=HJfc
+-----END PGP MESSAGE-----`;
+        const { data: streamedData, verified: verifiedPromise } = await CryptoWorker.decryptMessageStream({
+            armoredMessageStream: toStream(armoredMessage),
+            passwords: 'password'
+        });
+        expect(await readToEnd(streamedData)).to.equal('hello world');
+        expect(await verifiedPromise).to.equal(VERIFICATION_STATUS.NOT_SIGNED);
+
+        const decryptWithWrongPassword = CryptoWorker.decryptMessageStream({
+            armoredMessageStream: toStream(armoredMessage),
+            passwords: 'wrong password'
+        });
+        await expect(decryptWithWrongPassword).to.be.rejectedWith(/Error decrypting message/);
+    });
+
+    it('decryptMessageStream - message with signatures', async () => {
+        const messageWithSignature = `-----BEGIN PGP MESSAGE-----
+
+wy4ECQMIz+30zDzlo78AgM4DMxKKjeQcq5HHwLnZBZXuKgt++MTlZ7Pr0ySM
+1/ub0sACASRBnY7vKtUz6ufhaAcoDXjUoI67FQLmG/MvnTUAzEDd4WuMSBWR
+RjvtICMfnnemTam2TuWIoQMrHHSNEGGrbk0zEldVmGeCAVXbJZnCK6nw0y4R
+i5xngza2mpOpl3EmxfsBYYM0VqqytqryYc7mWvqzyve+dbkpVBPGsFBTZB8q
+lOOoUM6OWVDqVjelATSUg79gq/GJ3yAJpHDz9TnRb5IlTocI5XS4zzT6aawl
+TMcrzc6rm9yPDoz7Raqzltqspzs=
+=vmWm
+-----END PGP MESSAGE-----
+`;
+
+        const armoredSigningKey = `-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+xjMEYk2RmhYJKwYBBAHaRw8BAQdAkp1Gj5dLd5u/ZaNjFxpBnyF2LuzTE1d5
+7Pmhu5Px7JzNDzx0ZXN0QHRlc3QuY29tPsKMBBAWCgAdBQJiTZGaBAsJBwgD
+FQgKBBYAAgECGQECGwMCHgEAIQkQd8x+I8gsZdQWIQQ+RiZho8Ndwrb2FNd3
+zH4jyCxl1FolAP4lTNkdTYgEguIwhRfAoYdnA2816hQT/3LMQTMlXySG3wD/
+aNSzjlcXVEfZpxpQgswtW+ZvSb5/UTV3KmjNnw7ipALOOARiTZGaEgorBgEE
+AZdVAQUBAQdA9+jWaDsszh+T0Mgz+eioXyxvphIwZptdk+xuMywyFCcDAQgH
+wngEGBYIAAkFAmJNkZoCGwwAIQkQd8x+I8gsZdQWIQQ+RiZho8Ndwrb2FNd3
+zH4jyCxl1LQYAQDq7OX+DpsfrTfme/UBE9WqarDh/a2Uk59cLUuAB8D8rQD+
+OaSAaoY2xdXEd9a74kIIFNDNmDWQaarsrbGdYrFrgw0=
+=20Bp
+-----END PGP PUBLIC KEY BLOCK-----`
+        const decryptionResult = await CryptoWorker.decryptMessageStream({
+            armoredMessageStream: toStream(messageWithSignature),
+            passwords: 'password',
+            verificationKeys: await CryptoWorker.importPublicKey({ armoredKey: armoredSigningKey })
+        });
+        expect(await readToEnd(decryptionResult.data)).to.equal('hello world');
+        expect(await decryptionResult.verified).to.equal(VERIFICATION_STATUS.SIGNED_AND_VALID);
+
+        const invalidDecryptionResult = await CryptoWorker.decryptMessageStream({
+            armoredMessageStream: toStream(messageWithSignature),
+            passwords: 'password',
+            verificationKeys: []
+        });
+        expect(await readToEnd(invalidDecryptionResult.data)).to.equal('hello world');
+        expect(await invalidDecryptionResult.verified).to.equal(VERIFICATION_STATUS.SIGNED_AND_INVALID);
     });
 
     it('encryptMessage - output binary message should be transferred', async () => {

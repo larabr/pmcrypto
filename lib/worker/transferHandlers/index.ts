@@ -1,5 +1,7 @@
 import type { TransferHandler } from 'comlink';
-import type { KeyReference } from './api.models';
+import type { KeyReference, Data, WorkerStreamDecryptionOptions, WorkerStreamDecryptionResult } from '../api.models';
+import { ReadableStreamSerializer, SerializeWebStreamTypes } from './streamHandler';
+import { PromiseSerializer } from './promiseHandler';
 
 // return interface with same non-function fields as T, and with function fields type converted to their return type
 // e.g. ExtractFunctionReturnTypes<{ foo: () => string, bar: 3 }> returns { foo: string, bar: 3 }
@@ -98,6 +100,45 @@ const ResultTranferer = {
     }
 };
 
+type WorkerObjectWithStreams = WorkerStreamDecryptionOptions | WorkerStreamDecryptionResult<Data>;
+type SerializedMessageStream = SerializeWebStreamTypes<WorkerObjectWithStreams>
+const MessageStreamSerializer = { // Takes care of both options and return streamed data
+    _fieldNames: ['armoredMessageStream', 'binaryMessageStream', 'data'],
+    canHandle: (obj: any): obj is WorkerObjectWithStreams => {
+        if (typeof obj !== 'object') return false;
+        const matchingFields = MessageStreamSerializer._fieldNames.filter((name) => obj[name]);
+        return matchingFields.length > 0 &&
+            matchingFields.every((name) => ReadableStreamSerializer.canHandle(obj[name]));
+    },
+
+    serialize: (obj: any): SerializedMessageStream => {
+        const serialized = { ...obj };
+        MessageStreamSerializer._fieldNames.forEach((name) => {
+            if (name in obj) {
+                serialized[name] = ReadableStreamSerializer.serialize(obj[name]);
+            }
+        });
+        return serialized as SerializedMessageStream;
+    },
+
+    getTransferables: (serialized: SerializedMessageStream): MessagePort[] => {
+        return MessageStreamSerializer._fieldNames
+            .filter((name) => name in serialized)
+            .map((name) => serialized[name as keyof SerializedMessageStream])
+    },
+
+    deserialize: (serialized: any) => {
+        const result = { ...serialized };
+        MessageStreamSerializer._fieldNames.forEach((name) => {
+            if (name in serialized) {
+                result[name] = ReadableStreamSerializer.deserialize(serialized[name]);
+            }
+        });
+
+        return result as WorkerObjectWithStreams;
+    }
+};
+
 type OneWayTransferHandler = {
     name: string,
     workerHandler: TransferHandler<any, any>,
@@ -152,6 +193,36 @@ const oneWayTransferHanders: OneWayTransferHandler[] = [
  * They are meant to be set both inside the worker and in the main thread.
  */
 const sharedTransferHandlers: ExportedTransferHandler[] = [
+    // NB: the order of declaration matters: only the first matching handler is applied.
+    {
+        name: 'decryptMessageStream', // takes care of both options and return value
+        handler: {
+            canHandle: MessageStreamSerializer.canHandle,
+            serialize: (obj: object) => {
+                const serialized = KeyOptionsSerializer.serialize(
+                    MessageStreamSerializer.serialize(obj)
+                );
+                const transferables = MessageStreamSerializer.getTransferables(serialized);
+                if ('verified' in serialized) { // only present in returned value
+                    serialized.verified = PromiseSerializer.serialize(serialized.verified);
+                    transferables.push(serialized.verified)
+                }
+                return [
+                    serialized,
+                    transferables
+                ]
+            },
+            deserialize: (serialized) => {
+                const deserialized = MessageStreamSerializer.deserialize(
+                    KeyOptionsSerializer.deserialize(serialized)
+                );
+                if ('verified' in deserialized) { // only present in returned value
+                    deserialized.verified = PromiseSerializer.deserialize(serialized.verified);
+                }
+                return deserialized;
+            }
+        }
+    },
     {
         name: 'KeyReference',
         handler: {

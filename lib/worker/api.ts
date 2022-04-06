@@ -36,9 +36,10 @@ import type {
     Data,
     PrivateKey,
     PublicKey,
-    Key
+    Key,
+    WebStream
 } from '../pmcrypto';
-import { decryptKey, encryptKey, MaybeArray, readPrivateKey, readKeys, enums, config as globalConfig, setConfig as setStandardOpenPGPConfig } from '../openpgp';
+import { readMessage, decryptKey, encryptKey, MaybeArray, readPrivateKey, readKeys, enums, config as globalConfig, setConfig as setStandardOpenPGPConfig } from '../openpgp';
 
 import {
     PublicKeyReference,
@@ -62,7 +63,9 @@ import {
     WorkerGetKeyInfoOptions,
     KeyInfo,
     WorkerVerifyCleartextOptions,
-    OpenPGPConfig
+    OpenPGPConfig,
+    WorkerStreamDecryptionOptions,
+    WorkerStreamDecryptionResult
 } from './api.models';
 // Note:
 // - streams are currently not supported since they are not Transferable (not in all browsers).
@@ -438,6 +441,41 @@ export class Api extends KeyManagementApi {
         };
 
         return serialisedResult;
+    }
+
+    async decryptMessageStream<F extends WorkerDecryptionOptions['format'] = 'utf8'>({
+        decryptionKeys: decryptionKeyRefs = [],
+        verificationKeys: verificationKeyRefs = [],
+        binaryEncryptedSignature,
+        armoredMessageStream,
+        binaryMessageStream,
+        armoredSignature,
+        binarySignature,
+        armoredEncryptedSignature,
+        ...options
+    }: WorkerStreamDecryptionOptions & { format?: F }) {
+        const decryptionKeys = await Promise.all(
+            toArray(decryptionKeyRefs).map((keyReference) => this.keyStore.get(keyReference._idx) as PrivateKey)
+        );
+        const verificationKeys = await Promise.all(
+            toArray(verificationKeyRefs).map((keyReference) => this.keyStore.get(keyReference._idx))
+        );
+
+        const message = binaryMessageStream ?
+            await readMessage({ binaryMessage: binaryMessageStream }) :
+            await readMessage({ armoredMessage: armoredMessageStream! });
+        const signature = await getSignatureIfDefined(binarySignature || armoredSignature);
+        const encryptedSignature = await getMessageIfDefined(binaryEncryptedSignature || armoredEncryptedSignature);
+
+        const { data, verified } = await decryptMessage<WebStream<Data>, F>({
+            ...options,
+            message,
+            signature,
+            encryptedSignature,
+            decryptionKeys,
+            verificationKeys
+        });
+        return { data, verified } as WorkerStreamDecryptionResult<F extends 'utf8' ? string : Uint8Array>;
     }
 
     async decryptMessage<F extends WorkerDecryptionOptions['format'] = 'utf8'>({

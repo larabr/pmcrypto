@@ -4,6 +4,7 @@ import type {
   SignOptionsPmcrypto,
   EncryptOptionsPmcrypto,
   Data,
+  WebStream,
   VerifyOptionsPmcrypto,
   VerifyMessageResult,
   AlgorithmInfo,
@@ -21,7 +22,7 @@ import type {
 export type { PartialConfig as OpenPGPConfig } from 'openpgp/lightweight';
 
 type MaybeArray<T> = T[] | T;
-export type { SessionKey, AlgorithmInfo };
+export type { SessionKey, AlgorithmInfo, WebStream, Data };
 
 // TODO TS: do not allow mutually exclusive properties
 export interface WorkerDecryptionOptions
@@ -38,6 +39,14 @@ export interface WorkerDecryptionOptions
 export interface WorkerDecryptionResult<T extends Data> extends Omit<DecryptResultPmcrypto<T>, 'signatures'> {
     signatures: Uint8Array[]
 }
+
+export interface WorkerStreamDecryptionOptions
+    extends Omit<WorkerDecryptionOptions, 'armoredMessage' | 'binaryMessage' | 'expectSigned'> {
+    // `expectSigned` is not supported for a techical limitation with combining returned stream data with a rejected promise
+    armoredMessageStream?: WebStream<string>;
+    binaryMessageStream?: WebStream<Uint8Array>;
+}
+export interface WorkerStreamDecryptionResult<T extends Data> extends Pick<DecryptResultPmcrypto<WebStream<T>>, 'data' | 'verified'> {}
 
 export interface WorkerDecryptLegacyOptions
     extends Omit<DecryptLegacyOptions, 'message' | 'signature' | 'encryptedSignature' | 'verificationKeys' | 'decryptionKeys'> {
