@@ -222,6 +222,43 @@ OaSAaoY2xdXEd9a74kIIFNDNmDWQaarsrbGdYrFrgw0=
         expect(await invalidDecryptionResult.verified).to.equal(VERIFICATION_STATUS.SIGNED_AND_INVALID);
     });
 
+    it('decryptMessageStream - output binary data should be transferred', async () => {
+        const armoredMessage = `-----BEGIN PGP MESSAGE-----
+
+wy4ECQMIxybp91nMWQIAa8pGeuXzR6zIs+uE6bUywPM4GKG8sve4lJoxGbVS
+/xN10jwBEsZQGe7OTWqxJ9NNtv6X6qFEkvABp4PD3xvi34lo2WUAaUN2wb0g
+tBiO7HKQxoGj3FnUTJnI52Y0pIg=
+=HJfc
+-----END PGP MESSAGE-----`;
+
+        const decryptionResult = await CryptoWorker.decryptMessageStream({
+            armoredMessageStream: toStream(armoredMessage),
+            passwords: 'password',
+            format: 'binary'
+        });
+        expect(await readToEnd(decryptionResult.data)).to.deep.equal(stringToUtf8Array('hello world'));
+        expect(await decryptionResult.verified).to.equal(VERIFICATION_STATUS.NOT_SIGNED);
+    });
+
+    it('decryptMessageStream - returned stream can be cancelled', async () => {
+        const armoredMessage = `-----BEGIN PGP MESSAGE-----
+
+wy4ECQMIxybp91nMWQIAa8pGeuXzR6zIs+uE6bUywPM4GKG8sve4lJoxGbVS
+/xN10jwBEsZQGe7OTWqxJ9NNtv6X6qFEkvABp4PD3xvi34lo2WUAaUN2wb0g
+tBiO7HKQxoGj3FnUTJnI52Y0pIg=
+=HJfc
+-----END PGP MESSAGE-----`;
+const input = toStream(armoredMessage)
+
+        const decryptionResult = await CryptoWorker.decryptMessageStream({
+            armoredMessageStream: input,
+            passwords: 'password',
+            format: 'binary'
+        });
+        await decryptionResult.data.cancel('user cancel');
+        expect(await readToEnd(decryptionResult.data)).to.deep.equal(new Uint8Array([]));
+    });
+
     it('encryptMessage - output binary message should be transferred', async () => {
         const encryptionResult = await CryptoWorker.encryptMessage({
             textData: 'hello world',

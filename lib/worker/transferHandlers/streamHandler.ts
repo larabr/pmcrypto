@@ -10,16 +10,30 @@ export const ReadableStreamSerializer = {
     serialize: (readableStream: WebStream<Data>): MessagePort => {
         const { port1, port2 } = new MessageChannel();
 
-        const reader = readableStream.getReader();
+        // wait to get the reader until the first chunk is requested
+        // in case the user wants to cancel the stream before starting reading it
+        let reader: ReturnType<typeof readableStream.getReader> | null = null;
 
         // Listen and forward calls onto the iterator
         port1.onmessage = async ({ data: { type } }) => {
+            let dataChunk;
             switch (type) {
                 case STREAM_CONTROL_TYPE.READ:
-                    port1.postMessage(await reader.read());
+                    if (reader === null) {
+                        reader = readableStream.getReader();
+                    }
+                    dataChunk = await reader.read();
+                    port1.postMessage(
+                        dataChunk,
+                        dataChunk instanceof Uint8Array ? [dataChunk] : [] // transferables
+                    );
                     break;
                 case STREAM_CONTROL_TYPE.CANCEL:
-                    reader.cancel();
+                    if (reader) {
+                        reader.cancel();
+                    } else {
+                        readableStream.cancel();
+                    }
                     break;
                 default:
                     throw new Error('Unknown stream transfer control type');
