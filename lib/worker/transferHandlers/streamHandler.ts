@@ -1,3 +1,4 @@
+import { ReadableStream } from 'web-streams-polyfill';
 import type { WebStream, Data } from '../api.models';
 
 type ChunkWithData = { done: boolean, value: Data };
@@ -14,7 +15,6 @@ export const ReadableStreamSerializer = {
         // in case the user wants to cancel the stream before starting reading it
         let reader: ReturnType<typeof readableStream.getReader> | null = null;
 
-        // Listen and forward calls onto the iterator
         port1.onmessage = async ({ data: { type } }) => {
             let dataChunk;
             switch (type) {
@@ -54,9 +54,8 @@ export const ReadableStreamSerializer = {
         // Minimal proxy reader
         const proxyReader = {
             read: () => {
-              // Inform the iterator that next has been called
               port.postMessage({ type: STREAM_CONTROL_TYPE.READ });
-              // Return a promise that will resolve with the object returned by the iterator
+              // promise that will resolve with the chunk returned by the remote reader
               return nextPortMessage();
             },
 
@@ -82,10 +81,7 @@ export const ReadableStreamSerializer = {
             cancel() {
                 proxyReader.cancel()
             }
-        })
-
-        // // TODO? Make it iterable so it can be used in for-await-of statement
-        // reconstructedStream[Symbol.asyncIterator] = () => proxyReader;
+        });
 
         return reconstructedStream;
     }
