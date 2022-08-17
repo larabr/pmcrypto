@@ -28,7 +28,7 @@
         "@openpgp/asmcrypto.js": "^2.3.2",
         "@openpgp/tweetnacl": "^1.0.3",
         "@openpgp/web-stream-tools": "^0.0.10",
-        "openpgp": "npm:@protontech/openpgp@~5.4.0"
+        "openpgp": "git+https://github.com/openpgpjs/openpgpjs.git"
     },
     "devDependencies": {
         "@types/chai": "^4.3.0",
