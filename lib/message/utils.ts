@@ -1,4 +1,4 @@
-import { readToEnd } from '@openpgp/web-stream-tools';
+import { readToEnd } from '../web-stream-tools';
 import {
     PacketList,
     enums,
