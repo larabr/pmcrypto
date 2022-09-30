@@ -27,6 +27,7 @@
     "dependencies": {
         "@openpgp/asmcrypto.js": "larabr/asmcrypto.js#browser-no-buffer-import",
         "@openpgp/tweetnacl": "^1.0.3",
+        "@openpgp/web-stream-tools": "larabr/web-stream-tools#browser-no-buffer-import",
         "openpgp": "npm:@protontech/openpgp@~5.4.0"
     },
     "devDependencies": {
