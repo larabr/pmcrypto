@@ -1,0 +1,30 @@
+on:
+  push:
+    # only testing on main is supported, since we store Browserstack credentials
+    # as repo secrets, which are not accessible in PRs nor forks.
+    branches: [main]
+
+jobs:
+  test-browsers-compatibility:
+    name: Code tests (older browsers, on Browserstack)
+    runs-on: ubuntu-latest
+    env:
+      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+    
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Wait for other Browserstack tests to finish
+        uses: softprops/turnstyle@v1
+        with:
+          poll-interval-seconds: 30
+          abort-after-seconds: 900
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run browserstack tests
+        run: npm run test-browserstack

@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 const { firefox, chromium, webkit } = require('playwright');
 
 process.env.CHROME_BIN = chromium.executablePath();
@@ -19,7 +20,8 @@ module.exports = function(config) {
             'karma-mocha-reporter',
             'karma-chrome-launcher',
             'karma-firefox-launcher',
-            'karma-webkit-launcher'
+            'karma-webkit-launcher',
+            'karma-browserstack-launcher'
         ],
 
         // list of files / patterns to load in the browser
@@ -52,7 +54,7 @@ module.exports = function(config) {
         },
 
         // available reporters: https://www.npmjs.com/search?q=keywords:karma-reporter
-        reporters: ['mocha'],
+        reporters: ['mocha', 'BrowserStack'],
 
         // web server port
         port: 9876,
@@ -67,7 +69,32 @@ module.exports = function(config) {
         // enable / disable watching file and executing tests whenever any file changes
         autoWatch: false,
 
+        browserStack: {
+            username: process.env.BROWSERSTACK_USERNAME,
+            accessKey: process.env.BROWSERSTACK_ACCESS_KEY,
+            build: process.env.GITHUB_SHA,
+            name: process.env.GITHUB_WORKFLOW,
+            project: '@openpgpjs/noble-hashes',
+            timeout: 60
+        },
+
+        customLaunchers: {
+            bs_safari_13_1: { // no BigInt support
+                base: 'BrowserStack',
+                browser: 'Safari',
+                browser_version: '13.1',
+                os: 'OS X',
+                os_version: 'Catalina'
+            }
+        },
+
         browsers: ['ChromeHeadless', 'FirefoxHeadless', 'WebkitHeadless'],
+
+        captureTimeout: 6e5,
+        browserDisconnectTolerance: 0,
+        browserDisconnectTimeout: 6e5,
+        browserSocketTimeout: 3e5,
+        browserNoActivityTimeout: 6e5,
 
         // Continuous Integration mode
         // if true, Karma captures browsers, runs the tests and exits

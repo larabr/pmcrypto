@@ -5,8 +5,8 @@ on:
     branches: [main]
 
 jobs:
-  tests:
-    name: Tests
+  test-browsers-latest:
+    name: Code tests (latest browsers)
     runs-on: ubuntu-latest
 
     steps:
