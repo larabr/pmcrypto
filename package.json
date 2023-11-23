@@ -34,7 +34,7 @@
         "@openpgp/tweetnacl": "^1.0.3",
         "@openpgp/web-stream-tools": "^0.0.13",
         "jsmimeparser": "npm:@protontech/jsmimeparser@^3.0.1",
-        "openpgp": "npm:@protontech/openpgp@~5.10.2"
+        "openpgp": "git+https://github.com/larabr/openpgpjs#protonmail/v5-eddsa-faulty-verify-stats"
     },
     "devDependencies": {
         "@types/bn.js": "^5.1.1",
@@ -60,7 +60,7 @@
         "karma-firefox-launcher": "^2.1.2",
         "karma-mocha": "^2.0.1",
         "karma-mocha-reporter": "^2.2.5",
-        "karma-webkit-launcher": "^1.0.2",
+        "karma-webkit-launcher": "^2.1.0",
         "karma-webpack": "^5.0.0",
         "mocha": "^9.2.0",
         "playwright": "^1.25.0",
